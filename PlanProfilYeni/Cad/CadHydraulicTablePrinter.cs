@@ -64,7 +64,7 @@ namespace PlanProfilYeni.Cad
             }
 
             // 4) Vertical grid
-            double bottomY = currentY + 3.0;
+            double bottomY = _opt.BaseY - (rows.Count * _opt.RowStep);
 
             for (int i = 0; i < _opt.ColumnBoundaries.Length; i++)
             {
