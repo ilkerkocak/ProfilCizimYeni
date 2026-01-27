@@ -1,4 +1,4 @@
-using PlanProfilYeni.Application;
+ï»¿using PlanProfilYeni.Application;
 using PlanProfilYeni.Cad;
 using PlanProfilYeni.Services;
 using System;
@@ -16,17 +16,21 @@ namespace PlanProfilYeni.UI
         private ListBox lstExcels;
         private Button btnAddExcel;
         private Button btnRemoveExcel;
+
         private Button btnHydraulicExcel;
-        private Button btnDrawCad;
+        private Button btnHydraulicCad;
+
+        private Button btnCoordinateExcel;
+        private Button btnCoordinateCad;
 
         private ProgressBar progressBar;
         private Label lblStatus;
 
         public Form1()
         {
-            Text = "PlanProfilYeni - Otomasyon Aracý";
-            Width = 800;
-            Height = 500;
+            Text = "PlanProfilYeni - Otomasyon AracÄ±";
+            Width = 900;
+            Height = 520;
             StartPosition = FormStartPosition.CenterScreen;
 
             InitializeUI();
@@ -34,94 +38,112 @@ namespace PlanProfilYeni.UI
 
         private void InitializeUI()
         {
-            lstExcels = new ListBox { Left = 20, Top = 20, Width = 500, Height = 200, DataSource = _excelFiles };
+            lstExcels = new ListBox
+            {
+                Left = 20,
+                Top = 20,
+                Width = 500,
+                Height = 200,
+                DataSource = _excelFiles
+            };
 
-            btnAddExcel = new Button { Left = 550, Top = 20, Width = 200, Text = "Excel Ekle" };
+            btnAddExcel = new Button { Left = 550, Top = 20, Width = 300, Text = "Excel Ekle" };
             btnAddExcel.Click += BtnAddExcel_Click;
 
-            btnRemoveExcel = new Button { Left = 550, Top = 60, Width = 200, Text = "Seçiliyi Sil" };
-            btnRemoveExcel.Click += (s, e) => { if (lstExcels.SelectedItem is string path) _excelFiles.Remove(path); };
+            btnRemoveExcel = new Button { Left = 550, Top = 60, Width = 300, Text = "SeÃ§iliyi Sil" };
+            btnRemoveExcel.Click += (s, e) =>
+            {
+                if (lstExcels.SelectedItem is string path)
+                    _excelFiles.Remove(path);
+            };
 
-            btnHydraulicExcel = new Button { Left = 20, Top = 250, Width = 300, Height = 40, Text = "Hidrolik Tablo Excel Oluþtur" };
+            // --- BUTONLAR ---
+            btnHydraulicExcel = new Button { Left = 20, Top = 250, Width = 400, Height = 40, Text = "Hidrolik Tablo â†’ Excel" };
             btnHydraulicExcel.Click += BtnHydraulicExcel_Click;
 
-            btnDrawCad = new Button { Left = 340, Top = 250, Width = 200, Height = 40, Text = "AutoCAD'e Çiz" };
-            btnDrawCad.Click += BtnDrawCad_Click;
+            btnHydraulicCad = new Button { Left = 450, Top = 250, Width = 400, Height = 40, Text = "Hidrolik Tablo â†’ AutoCAD" };
+            btnHydraulicCad.Click += BtnHydraulicCad_Click;
 
-            progressBar = new ProgressBar { Left = 20, Top = 320, Width = 730 };
-            lblStatus = new Label { Left = 20, Top = 350, Width = 730, Text = "Hazýr" };
+            btnCoordinateExcel = new Button { Left = 20, Top = 310, Width = 400, Height = 40, Text = "Koordinat Tablosu â†’ Excel" };
+            btnCoordinateExcel.Click += BtnCoordinateExcel_Click;
 
-            Controls.AddRange(new Control[] { lstExcels, btnAddExcel, btnRemoveExcel, btnHydraulicExcel, btnDrawCad, progressBar, lblStatus });
+            btnCoordinateCad = new Button { Left = 450, Top = 310, Width = 400, Height = 40, Text = "Koordinat Tablosu â†’ AutoCAD" };
+            btnCoordinateCad.Click += BtnCoordinateCad_Click;
+
+            progressBar = new ProgressBar { Left = 20, Top = 380, Width = 830 };
+            lblStatus = new Label { Left = 20, Top = 410, Width = 830, Text = "HazÄ±r" };
+
+            Controls.AddRange(new Control[]
+            {
+                lstExcels,
+                btnAddExcel,
+                btnRemoveExcel,
+                btnHydraulicExcel,
+                btnHydraulicCad,
+                btnCoordinateExcel,
+                btnCoordinateCad,
+                progressBar,
+                lblStatus
+            });
         }
 
         private void BtnAddExcel_Click(object sender, EventArgs e)
         {
-            using var dlg = new OpenFileDialog { Filter = "Excel (*.xls;*.xlsx)|*.xls;*.xlsx", Multiselect = true };
+            using var dlg = new OpenFileDialog
+            {
+                Filter = "Excel (*.xls;*.xlsx)|*.xls;*.xlsx",
+                Multiselect = true
+            };
+
             if (dlg.ShowDialog() == DialogResult.OK)
-                foreach (var file in dlg.FileNames) if (!_excelFiles.Contains(file)) _excelFiles.Add(file);
+            {
+                foreach (var file in dlg.FileNames)
+                    if (!_excelFiles.Contains(file))
+                        _excelFiles.Add(file);
+            }
         }
 
+        // ================================
+        // 1) HÄ°DROLÄ°K â†’ EXCEL
+        // ================================
         private void BtnHydraulicExcel_Click(object sender, EventArgs e)
         {
-            if (_excelFiles.Count == 0) { MessageBox.Show("Önce Excel dosyasý seçmelisin."); return; }
+            if (_excelFiles.Count == 0) { MessageBox.Show("Excel seÃ§melisin."); return; }
 
-            using var saveDlg = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = "HidrolikTablo.xlsx" };
-            if (saveDlg.ShowDialog() != DialogResult.OK) return;
+            using var save = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = "HidrolikTablo.xlsx" };
+            if (save.ShowDialog() != DialogResult.OK) return;
 
-            try
+            RunSafe("Hidrolik tablo Excel oluÅŸturuluyor...", () =>
             {
-                progressBar.Style = ProgressBarStyle.Marquee;
-                lblStatus.Text = "Excel oluþturuluyor...";
+                var useCase = new ExportHydraulicExcelUseCase(
+                    new HydraulicExcelService(),
+                    new HydraulicReportWriter());
 
-                // HATA DÜZELTME: Application namespace çakýþmasýný önlemek için tam yol
-                System.Windows.Forms.Application.DoEvents();
-
-                var useCase = new ExportHydraulicExcelUseCase(new HydraulicExcelService(), new HydraulicReportWriter());
-
-                useCase.Execute(new HydraulicProcessOptions { InputFiles = _excelFiles.ToArray(), OutputExcelPath = saveDlg.FileName });
-
-                lblStatus.Text = "Tamamlandý";
-                progressBar.Style = ProgressBarStyle.Blocks;
-                MessageBox.Show("Excel baþarýyla oluþturuldu.");
-            }
-            catch (Exception ex)
-            {
-                progressBar.Style = ProgressBarStyle.Blocks;
-                MessageBox.Show(ex.Message, "Hata");
-                lblStatus.Text = "Hata oluþtu";
-                // Hatanýn tam detayýný gösteren mesaj kutusu
-                string detayliMesaj = $"Hata Mesajý: {ex.Message}\n\n" +
-                                      $"Hata Kaynaðý: {ex.Source}\n\n" +
-                                      $"Yýðýn (Stack Trace): {ex.StackTrace}";
-
-                MessageBox.Show(detayliMesaj, "Hata Detayý", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                // Panoya kopyala ki bana atabilesin
-                Clipboard.SetText(detayliMesaj);
-            }
+                useCase.Execute(new HydraulicProcessOptions
+                {
+                    InputFiles = _excelFiles.ToArray(),
+                    OutputExcelPath = save.FileName
+                });
+            });
         }
 
-        private void BtnDrawCad_Click(object sender, EventArgs e)
+        // ================================
+        // 2) HÄ°DROLÄ°K â†’ AUTOCAD
+        // ================================
+        private void BtnHydraulicCad_Click(object sender, EventArgs e)
         {
-            if (_excelFiles.Count == 0) { MessageBox.Show("Lütfen önce listeden Excel dosyasý seçin."); return; }
+            if (_excelFiles.Count == 0) { MessageBox.Show("Excel seÃ§melisin."); return; }
 
-            try
+            RunSafe("Hidrolik tablo AutoCAD'e Ã§iziliyor...", () =>
             {
-                lblStatus.Text = "AutoCAD'e baðlanýlýyor ve çiziliyor...";
-                progressBar.Style = ProgressBarStyle.Marquee;
-
-                // HATA DÜZELTME: Application namespace çakýþmasýný önlemek için tam yol
-                System.Windows.Forms.Application.DoEvents();
-
-                // 22 Sütun sýnýrý (21 veri + 1 bitiþ)
-                double[] boundaries = new double[]
+                double[] boundaries =
                 {
                     0.0, 18.0, 28.0, 58.0, 72.0, 84.0, 96.0, 106.0, 119.5, 134.0,
-                    144.0, 154.0, 166.0, 181.0, 210.49, 222.49, 232.49, 242.49, 252.49, 266.876,
-                    282.279, 295.826
+                    144.0, 154.0, 166.0, 181.0, 210.49, 222.49, 232.49, 242.49,
+                    252.49, 266.876, 282.279, 295.826
                 };
 
-                var cadOptions = new CadHydraulicTableOptions
+                var options = new CadHydraulicTableOptions
                 {
                     BaseX = 0,
                     BaseY = 500,
@@ -132,33 +154,74 @@ namespace PlanProfilYeni.UI
                     RowStep = 3.5,
                     FirstRowOffsetY = 1.75,
                     GridLayer = "Arazi",
-                    TextLayer = "TipKesit-YazýÇizgileri",
+                    TextLayer = "TipKesit-YazÄ±Ã‡izgileri",
                     TextHeight = 2.0,
                     TextAlignmentCenter = AcAlignment.acAlignmentMiddleCenter
                 };
 
-                // HATA DÜZELTME: Constructor parametresi eklendi
                 var useCase = new PrintHydraulicTableToCadUseCase(new HydraulicExcelService());
+                useCase.Execute(_excelFiles.ToArray(), options);
+            });
+        }
 
-                useCase.Execute(_excelFiles.ToArray(), cadOptions);
+        // ================================
+        // 3) KOORDÄ°NAT â†’ EXCEL
+        // ================================
+        private void BtnCoordinateExcel_Click(object sender, EventArgs e)
+        {
+            if (_excelFiles.Count == 0) { MessageBox.Show("Excel seÃ§melisin."); return; }
 
-                lblStatus.Text = "Çizim Tamamlandý";
-                progressBar.Style = ProgressBarStyle.Blocks;
-                MessageBox.Show("Ýþlem baþarýyla tamamlandý.\nLütfen AutoCAD'i kontrol edin.");
+            using var save = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = "KoordinatTablosu.xlsx" };
+            if (save.ShowDialog() != DialogResult.OK) return;
+
+            RunSafe("Koordinat tablosu Excel oluÅŸturuluyor...", () =>
+            {
+                var useCase = new ExportCoordinateExcelUseCase();
+                useCase.Execute(_excelFiles.ToArray());
+            });
+        }
+
+        // ================================
+        // 4) KOORDÄ°NAT â†’ AUTOCAD
+        // ================================
+        private void BtnCoordinateCad_Click(object sender, EventArgs e)
+        {
+            if (_excelFiles.Count == 0) { MessageBox.Show("Excel seÃ§melisin."); return; }
+
+            RunSafe("Koordinat tablosu AutoCAD'e Ã§iziliyor...", () =>
+            {
+                var useCase = new PrintCoordinateCadUseCase();
+                useCase.Execute(_excelFiles.ToArray());
+            });
+        }
+
+        // ================================
+        // ORTAK TRY/CATCH & UI
+        // ================================
+        private void RunSafe(string status, Action action)
+        {
+            try
+            {
+                progressBar.Style = ProgressBarStyle.Marquee;
+                lblStatus.Text = status;
+                System.Windows.Forms.Application.DoEvents();
+
+                action();
+
+                lblStatus.Text = "TamamlandÄ±";
+                MessageBox.Show("Ä°ÅŸlem tamamlandÄ±.");
             }
             catch (Exception ex)
             {
+                lblStatus.Text = "Hata oluÅŸtu";
+
+                string detay = $"Mesaj: {ex.Message}\n\nStack:\n{ex.StackTrace}";
+                MessageBox.Show(detay, "Hata", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Clipboard.SetText(detay);
+            }
+            finally
+            {
                 progressBar.Style = ProgressBarStyle.Blocks;
-                lblStatus.Text = "Hata oluþtu";
-                // Hatanýn tam detayýný gösteren mesaj kutusu
-                string detayliMesaj = $"Hata Mesajý: {ex.Message}\n\n" +
-                                      $"Hata Kaynaðý: {ex.Source}\n\n" +
-                                      $"Yýðýn (Stack Trace): {ex.StackTrace}";
-
-                MessageBox.Show(detayliMesaj, "Hata Detayý", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                // Panoya kopyala ki bana atabilesin
-                Clipboard.SetText(detayliMesaj);
             }
         }
     }

@@ -63,11 +63,16 @@
     <Compile Include="Application\ImportExcelTablesUseCase.cs" />
     <Compile Include="Application\PrintCoordinateCadUseCase.cs" />
     <Compile Include="Application\PrintHydraulicTableToCadUseCase.cs" />
+    <Compile Include="Cad\CadCoordinateTablePrinter.cs" />
     <Compile Include="Cad\CadHydraulicTableOptions.cs" />
     <Compile Include="Cad\CadHydraulicTablePrinter.cs" />
     <Compile Include="Cad\ComRelease.cs" />
+    <Compile Include="Domain\CoordinateRow.cs" />
     <Compile Include="Domain\HydraulicRow.cs" />
     <Compile Include="Program.cs" />
+    <Compile Include="Services\CoordinateExcelService.cs" />
+    <Compile Include="Services\CoordinateReportWriter.cs" />
+    <Compile Include="Services\GeometryService.cs" />
     <Compile Include="Services\HydraulicExcelService.cs" />
     <Compile Include="Services\HydraulicReportWriter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

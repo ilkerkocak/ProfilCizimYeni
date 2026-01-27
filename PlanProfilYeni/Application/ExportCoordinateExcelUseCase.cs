@@ -1,17 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using PlanProfilYeni.Domain;
+﻿using PlanProfilYeni.Services;
+using System;
+
 namespace PlanProfilYeni.Application
 {
     public class ExportCoordinateExcelUseCase
     {
-        public void Execute(List<string> files, HydraulicProcessOptions options)
+        private readonly CoordinateExcelService _reader = new();
+        private readonly CoordinateReportWriter _writer = new();
+
+        public void Execute(string[] files)
         {
-            MessageBox.Show("ExportCoordinateExcelUseCase çalıştı");
+            var rows = _reader.Read(files);
+
+            if (rows.Count == 0)
+                throw new Exception("Veri bulunamadı");
+
+            _writer.Export(rows);
         }
     }
 }
