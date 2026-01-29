@@ -5,7 +5,9 @@ using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Windows.Forms;
+using Autodesk.AutoCAD.Interop;
 using Autodesk.AutoCAD.Interop.Common;
+using System.Runtime.InteropServices;
 
 namespace PlanProfilYeni.UI
 {
@@ -23,6 +25,12 @@ namespace PlanProfilYeni.UI
         private Button btnCoordinateExcel;
         private Button btnCoordinateCad;
 
+        private Button btnProfileCad;   // ✅ YENİ
+
+        // 🔒 ÖLÇEKLERİ SELECT ETMEK İÇİN
+        private ComboBox cmbVerticalScale;
+        private ComboBox cmbHorizontalScale;
+
         private ProgressBar progressBar;
         private Label lblStatus;
 
@@ -30,7 +38,7 @@ namespace PlanProfilYeni.UI
         {
             Text = "PlanProfilYeni - Otomasyon Aracı";
             Width = 900;
-            Height = 520;
+            Height = 560;
             StartPosition = FormStartPosition.CenterScreen;
 
             InitializeUI();
@@ -57,36 +65,83 @@ namespace PlanProfilYeni.UI
                     _excelFiles.Remove(path);
             };
 
-            // --- BUTONLAR ---
-            btnHydraulicExcel = new Button { Left = 20, Top = 250, Width = 400, Height = 40, Text = "Hidrolik Tablo → Excel" };
+            // --------------------
+            // ÖLÇEK SEÇİMLERİ
+            // --------------------
+            cmbVerticalScale = new ComboBox
+            {
+                Left = 20,
+                Top = 230,
+                Width = 150,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Items = { "1/100", "1/500", "1/1000" }
+            };
+            cmbVerticalScale.SelectedIndex = 0;  // Varsayılan: 1/100
+
+            cmbHorizontalScale = new ComboBox
+            {
+                Left = 180,
+                Top = 230,
+                Width = 150,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Items = { "1/2000", "1/5000", "1/10000" }
+            };
+            cmbHorizontalScale.SelectedIndex = 1;  // Varsayılan: 1/5000
+
+            Label lblVertical = new Label { Left = 20, Top = 210, Text = "Düşey Ölçek:" };
+            Label lblHorizontal = new Label { Left = 180, Top = 210, Text = "Yatay Ölçek:" };
+
+            // --------------------
+            // BUTONLAR
+            // --------------------
+            btnHydraulicExcel = new Button { Left = 20, Top = 270, Width = 400, Height = 40, Text = "Hidrolik Tablo → Excel" };
             btnHydraulicExcel.Click += BtnHydraulicExcel_Click;
 
-            btnHydraulicCad = new Button { Left = 450, Top = 250, Width = 400, Height = 40, Text = "Hidrolik Tablo → AutoCAD" };
+            btnHydraulicCad = new Button { Left = 450, Top = 270, Width = 400, Height = 40, Text = "Hidrolik Tablo → AutoCAD" };
             btnHydraulicCad.Click += BtnHydraulicCad_Click;
 
-            btnCoordinateExcel = new Button { Left = 20, Top = 310, Width = 400, Height = 40, Text = "Koordinat Tablosu → Excel" };
+            btnCoordinateExcel = new Button { Left = 20, Top = 320, Width = 400, Height = 40, Text = "Koordinat Tablosu → Excel" };
             btnCoordinateExcel.Click += BtnCoordinateExcel_Click;
 
-            btnCoordinateCad = new Button { Left = 450, Top = 310, Width = 400, Height = 40, Text = "Koordinat Tablosu → AutoCAD" };
+            btnCoordinateCad = new Button { Left = 450, Top = 320, Width = 400, Height = 40, Text = "Koordinat Tablosu → AutoCAD" };
             btnCoordinateCad.Click += BtnCoordinateCad_Click;
 
-            progressBar = new ProgressBar { Left = 20, Top = 380, Width = 830 };
-            lblStatus = new Label { Left = 20, Top = 410, Width = 830, Text = "Hazır" };
+            // ✅ PROFİL ÇİZ BUTONU
+            btnProfileCad = new Button
+            {
+                Left = 20,
+                Top = 370,
+                Width = 830,
+                Height = 40,
+                Text = "Profil Çizimi → AutoCAD"
+            };
+            btnProfileCad.Click += BtnProfileCad_Click;
+
+            progressBar = new ProgressBar { Left = 20, Top = 440, Width = 830 };
+            lblStatus = new Label { Left = 20, Top = 470, Width = 830, Text = "Hazır" };
 
             Controls.AddRange(new Control[]
             {
                 lstExcels,
                 btnAddExcel,
                 btnRemoveExcel,
+                lblVertical,
+                cmbVerticalScale,
+                lblHorizontal,
+                cmbHorizontalScale,
                 btnHydraulicExcel,
                 btnHydraulicCad,
                 btnCoordinateExcel,
                 btnCoordinateCad,
+                btnProfileCad,
                 progressBar,
                 lblStatus
             });
         }
 
+        // =====================================================
+        // EXCEL EKLE
+        // =====================================================
         private void BtnAddExcel_Click(object sender, EventArgs e)
         {
             using var dlg = new OpenFileDialog
@@ -103,9 +158,9 @@ namespace PlanProfilYeni.UI
             }
         }
 
-        // ================================
+        // =====================================================
         // 1) HİDROLİK → EXCEL
-        // ================================
+        // =====================================================
         private void BtnHydraulicExcel_Click(object sender, EventArgs e)
         {
             if (_excelFiles.Count == 0) { MessageBox.Show("Excel seçmelisin."); return; }
@@ -127,9 +182,9 @@ namespace PlanProfilYeni.UI
             });
         }
 
-        // ================================
+        // =====================================================
         // 2) HİDROLİK → AUTOCAD
-        // ================================
+        // =====================================================
         private void BtnHydraulicCad_Click(object sender, EventArgs e)
         {
             if (_excelFiles.Count == 0) { MessageBox.Show("Excel seçmelisin."); return; }
@@ -164,15 +219,12 @@ namespace PlanProfilYeni.UI
             });
         }
 
-        // ================================
+        // =====================================================
         // 3) KOORDİNAT → EXCEL
-        // ================================
+        // =====================================================
         private void BtnCoordinateExcel_Click(object sender, EventArgs e)
         {
             if (_excelFiles.Count == 0) { MessageBox.Show("Excel seçmelisin."); return; }
-
-            using var save = new SaveFileDialog { Filter = "Excel (*.xlsx)|*.xlsx", FileName = "KoordinatTablosu.xlsx" };
-            if (save.ShowDialog() != DialogResult.OK) return;
 
             RunSafe("Koordinat tablosu Excel oluşturuluyor...", () =>
             {
@@ -181,9 +233,9 @@ namespace PlanProfilYeni.UI
             });
         }
 
-        // ================================
+        // =====================================================
         // 4) KOORDİNAT → AUTOCAD
-        // ================================
+        // =====================================================
         private void BtnCoordinateCad_Click(object sender, EventArgs e)
         {
             if (_excelFiles.Count == 0) { MessageBox.Show("Excel seçmelisin."); return; }
@@ -195,9 +247,62 @@ namespace PlanProfilYeni.UI
             });
         }
 
-        // ================================
-        // ORTAK TRY/CATCH & UI
-        // ================================
+        // =====================================================
+        // 5) PROFİL → AUTOCAD  ✅
+        // =====================================================
+        private void BtnProfileCad_Click(object sender, EventArgs e)
+        {
+            if (_excelFiles.Count == 0)
+            {
+                MessageBox.Show("Excel seçmelisin.");
+                return;
+            }
+
+            RunSafe("Profil AutoCAD'e çiziliyor...", () =>
+            {
+                var acadApp = (Autodesk.AutoCAD.Interop.AcadApplication)
+                    System.Runtime.InteropServices.Marshal
+                        .GetActiveObject("AutoCAD.Application");
+
+                var doc = acadApp.ActiveDocument;
+
+                double insertX = 0.0;
+                double insertY = 300.0;
+
+                // 🔒 ÖLÇEKLER (DROPDOWN'TAN SEÇILI DEĞERLER)
+                string verticalScaleStr = cmbVerticalScale.SelectedItem?.ToString() ?? "1/100";
+                string horizontalScaleStr = cmbHorizontalScale.SelectedItem?.ToString() ?? "1/5000";
+
+                // Örnek: "1/100" -> 100, "1/5000" -> 5000
+                int dusEyOlcek = int.Parse(verticalScaleStr.Split('/')[1]);
+                int yatayOlcek = int.Parse(horizontalScaleStr.Split('/')[1]);
+
+                // 🔒 CAD ÇARPANLARI (METRE CİNSİNDEN)
+                // 1000m / scale = CAD birimi per metre
+                double cadUnitsPerMeterHorizontal = 1000.0 / yatayOlcek;
+                double cadUnitsPerMeterVertical = 1000.0 / dusEyOlcek;
+
+                var useCase = new DrawProfileUseCase();
+                foreach (var excelPath in _excelFiles)
+                {
+                    useCase.Execute(
+                        excelPath,
+                        doc,
+                        insertX,
+                        insertY,
+                        cadUnitsPerMeterHorizontal,
+                        cadUnitsPerMeterVertical,
+                        System.IO.Path.GetFileNameWithoutExtension(excelPath));
+
+                    insertY -= 120.0;
+                }
+            });
+        }
+
+
+        // =====================================================
+        // ORTAK TRY / CATCH
+        // =====================================================
         private void RunSafe(string status, Action action)
         {
             try
@@ -205,6 +310,7 @@ namespace PlanProfilYeni.UI
                 progressBar.Style = ProgressBarStyle.Marquee;
                 lblStatus.Text = status;
                 System.Windows.Forms.Application.DoEvents();
+
 
                 action();
 

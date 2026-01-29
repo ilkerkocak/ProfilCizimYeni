@@ -1,13 +1,14 @@
-﻿using System.Runtime.InteropServices;
+﻿// Cad/ComRelease.cs
+using System.Runtime.InteropServices;
 
 namespace PlanProfilYeni.Cad
 {
     public static class ComRelease
     {
-        public static void Release(object obj)
+        public static void Release(object com)
         {
-            if (obj != null && Marshal.IsComObject(obj))
-                Marshal.ReleaseComObject(obj);
+            if (com != null && Marshal.IsComObject(com))
+                Marshal.ReleaseComObject(com);
         }
     }
 }
